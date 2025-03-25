@@ -65,10 +65,18 @@ The test suite includes:
 
 ## API Documentation
 
-The API is implemented according to the OpenAPI 3.0.0 specification. You can access the Swagger documentation at:
+The API is implemented according to the OpenAPI 3.0.0 specification. You can access the API documentation in two ways:
+
+1. Interactive Swagger UI:
 
 ```
 http://localhost:3000/api-docs
 ```
 
-For detailed API documentation and interactive testing, visit the Swagger UI when the server is running.
+2. Raw OpenAPI/Swagger JSON specification:
+
+```
+http://localhost:3000/api-docs.json
+```
+
+The Swagger UI provides an interactive interface for testing the API endpoints, while the JSON specification can be used with other OpenAPI tools or for programmatic access to the API documentation.
