@@ -390,9 +390,15 @@ app.delete("/api/users/:id", (req, res) => {
  *           format: date-time
  */
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-  console.log(
-    `Swagger documentation available at http://localhost:${port}/api-docs`
-  );
-});
+// Only start the server if this file is run directly
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+    console.log(
+      `Swagger documentation available at http://localhost:${port}/api-docs`
+    );
+  });
+}
+
+// Export the app for testing
+module.exports = app;

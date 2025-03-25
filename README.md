@@ -30,6 +30,25 @@ npm start
 
 The server will start on `http://localhost:3000`
 
+## Running Tests
+
+The project includes a comprehensive test suite that covers all API endpoints. To run the tests:
+
+```bash
+# Run tests once
+npm test
+
+# Run tests in watch mode (useful during development)
+npm run test:watch
+```
+
+The test suite includes:
+
+- Health check endpoint tests
+- User CRUD operation tests
+- Pagination tests
+- Error handling tests
+
 ## Available Endpoints
 
 ### Users
@@ -40,6 +59,16 @@ The server will start on `http://localhost:3000`
 - PUT /api/users/{id} - Update user
 - DELETE /api/users/{id} - Delete user
 
+### Health Check
+
+- GET /health - Check API health status
+
 ## API Documentation
 
-The API is implemented according to the OpenAPI 3.0.0 specification. For detailed API documentation, please refer to the OpenAPI specification file.
+The API is implemented according to the OpenAPI 3.0.0 specification. You can access the Swagger documentation at:
+
+```
+http://localhost:3000/api-docs
+```
+
+For detailed API documentation and interactive testing, visit the Swagger UI when the server is running.
