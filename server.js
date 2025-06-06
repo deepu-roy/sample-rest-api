@@ -20,7 +20,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${port}/api`,
+        url: `http://localhost:${port}`,
         description: "Local server",
       },
     ],
@@ -30,18 +30,19 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
-// Serve Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
 
 // Serve raw Swagger JSON
-app.get("/api-docs.json", (req, res) => {
+app.get("/api-docs/swagger.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerDocs);
 });
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
+// Serve Swagger UI - this should come after the JSON endpoint
+app.use("/api-docs", swaggerUi.serve);
+app.get("/api-docs", swaggerUi.setup(swaggerDocs));
 
 // Initialize database
 initializeDatabase();

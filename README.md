@@ -69,14 +69,14 @@ The API is implemented according to the OpenAPI 3.0.0 specification. You can acc
 
 1. Interactive Swagger UI:
 
-```
+```txt
 http://localhost:3000/api-docs
 ```
 
 2. Raw OpenAPI/Swagger JSON specification:
 
-```
-http://localhost:3000/api-docs.json
+```txt
+http://localhost:3000/api-docs/swagger.json
 ```
 
 The Swagger UI provides an interactive interface for testing the API endpoints, while the JSON specification can be used with other OpenAPI tools or for programmatic access to the API documentation.
