@@ -22,7 +22,8 @@ const config = {
       }
       // Default development configuration
       return ["http://localhost:5000", "http://127.0.0.1:5000"];
-    },    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   },
 };
