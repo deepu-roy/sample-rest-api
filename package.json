@@ -2,11 +2,13 @@
   "name": "sample-rest-api",
   "version": "1.0.0",
   "description": "A simple implementation of the ReqRes API using Node.js, Express, and SQLite",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "jest --detectOpenHandles",
-    "test:watch": "jest --watch"
+    "start": "npm run start:api",
+    "start:api": "cd api && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "install:all": "npm install && cd api && npm install && cd ../frontend && npm install",
+    "dev": "npm-run-all --parallel start:api start:frontend",
+    "test": "cd api && npm test"
   },
   "keywords": [
     "api",

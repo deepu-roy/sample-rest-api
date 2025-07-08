@@ -1,0 +1,12 @@
+{
+  "name": "sample-rest-api-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for the Sample REST API",
+  "main": "server.js",
+  "scripts": {
+    "start": "http-server . -p 5000 --cors"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}

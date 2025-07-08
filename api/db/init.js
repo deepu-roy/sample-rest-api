@@ -1,7 +1,12 @@
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
-const dbPath = path.resolve(__dirname, "database.sqlite");
+// Allow configuring database path through environment variable, fallback to local path
+const dbPath = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH, "database.sqlite")
+  : path.resolve(__dirname, "database.sqlite");
+
+console.log(`Initializing database at: ${dbPath}`);
 const db = new sqlite3.Database(dbPath);
 
 // Initialize database
