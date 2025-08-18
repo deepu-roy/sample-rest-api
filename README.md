@@ -173,7 +173,44 @@ npm start
 
 The frontend will be available at `http://localhost:5000`
 
+## Features
+
+### Role-Based User Management
+
+The application now includes comprehensive role-based user management:
+
+- **Three Default Roles**: User, Admin, and Moderator
+- **Role Assignment**: Users can be assigned roles during creation and editing
+- **Role Filtering**: Filter users by role in the user list
+- **Role Display**: User roles are displayed with color-coded badges in the interface
+- **Role Validation**: API validates role assignments and prevents invalid role IDs
+
+### User Interface Enhancements
+
+- **Enhanced User Grid**: Displays user roles with styled badges
+- **Create User Form**: Includes role selection dropdown
+- **Edit User Form**: Allows role changes with confirmation prompts
+- **Role Change Warnings**: Visual indicators when changing user roles
+- **Error Handling**: Comprehensive error messages for role-related operations
+
+### API Improvements
+
+- **Role Endpoints**: Full CRUD operations for role management
+- **User-Role Relationships**: Proper foreign key relationships in the database
+- **Role Filtering**: Query users by role ID with pagination support
+- **Audit Logging**: Role changes are logged for audit purposes
+- **Data Validation**: Comprehensive validation for role assignments
+
 ## Recent Improvements
+
+### Role Management System
+
+Added comprehensive role-based access control:
+
+- Database schema updated with roles table and user-role relationships
+- Role assignment and validation in user creation/update operations
+- Frontend interfaces for role selection and management
+- Role filtering capabilities in user listings
 
 ### SQLite3 Architecture Compatibility Fix
 
@@ -192,12 +229,90 @@ Fixed frontend-to-API connectivity issues:
 - Configured proper CORS settings for browser-based requests
 - Ensured API is accessible from both Docker network and host machine
 
+## Usage Examples
+
+### Role Management
+
+#### Creating a User with a Role
+
+```bash
+# Create a user with Admin role
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Admin",
+    "job": "System Administrator",
+    "role_id": 2
+  }'
+```
+
+#### Filtering Users by Role
+
+```bash
+# Get all Admin users
+curl "http://localhost:3000/api/users?role=2"
+
+# Get all Users with pagination
+curl "http://localhost:3000/api/users?role=1&page=1&per_page=5"
+```
+
+#### Updating User Role
+
+```bash
+# Change user role to Moderator
+curl -X PUT http://localhost:3000/api/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role_id": 3
+  }'
+```
+
+#### Getting Available Roles
+
+```bash
+# List all available roles
+curl http://localhost:3000/api/roles
+
+# Get specific role details
+curl http://localhost:3000/api/roles/2
+```
+
+### Frontend Features
+
+- **User Creation**: Select roles from dropdown when creating users
+- **User Editing**: Change user roles with confirmation prompts
+- **Role Display**: Color-coded role badges in the user list
+- **Role Filtering**: Filter users by role in the interface (coming soon)
+
 ## API Documentation
 
 Once the API server is running, you can access the Swagger documentation at:
 `http://localhost:3000/api-docs`
 
+The documentation includes detailed information about:
+
+- All available endpoints
+- Request/response schemas
+- Role management operations
+- Error codes and responses
+
 ## Database
+
+### Schema
+
+The application uses SQLite with the following main tables:
+
+- **users**: Stores user information with role assignments
+  - `id`, `email`, `first_name`, `last_name`, `avatar`, `job`, `role_id`
+- **roles**: Stores available roles
+  - `id`, `name`, `description`, `is_active`, `created_at`
+
+### Default Data
+
+The database is automatically seeded with:
+
+- **Default Roles**: User (ID: 1), Admin (ID: 2), Moderator (ID: 3)
+- **Sample Users**: Two users with different role assignments
 
 ### Docker Setup
 
@@ -235,23 +350,34 @@ docker-compose exec api npm test
 The test suite includes:
 
 - Health check endpoint tests
-- User CRUD operation tests
-- Pagination tests
-- Error handling tests
+- User CRUD operation tests with role management
+- Role management endpoint tests
+- Role filtering and pagination tests
+- Role validation and error handling tests
+- Audit logging tests for role changes
 
 ## Available Endpoints
 
 ### Users
 
-- `GET /api/users` - List all users
-- `POST /api/users` - Create a new user
-- `GET /api/users/{id}` - Get user by ID
-- `PUT /api/users/{id}` - Update user
+- `GET /api/users` - List all users (supports pagination and role filtering)
+  - Query parameters:
+    - `page` - Page number (default: 1)
+    - `per_page` - Items per page (default: 6)
+    - `role` - Filter by role ID (optional)
+- `POST /api/users` - Create a new user (with role assignment)
+- `GET /api/users/{id}` - Get user by ID (includes role information)
+- `PUT /api/users/{id}` - Update user (supports role changes)
 - `DELETE /api/users/{id}` - Delete user
+
+### Roles
+
+- `GET /api/roles` - List all active roles
+- `GET /api/roles/{id}` - Get role by ID
 
 ### Health Check
 
-- `GET /health` - Check API health status
+- `GET /api/health` - Check API health status
 
 ## Environment Variables
 

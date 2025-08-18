@@ -10,6 +10,7 @@ const { initializeDatabase } = require("./db/init");
 
 // Import routes
 const usersRouter = require("./routes/users");
+const rolesRouter = require("./routes/roles");
 const healthRouter = require("./routes/health");
 const swaggerDocs = require("./swagger/config");
 
@@ -41,6 +42,7 @@ initializeDatabase();
 
 // Routes
 app.use("/api/users", usersRouter);
+app.use("/api/roles", rolesRouter);
 app.use("/api/health", healthRouter);
 
 // Only start the server if this file is run directly

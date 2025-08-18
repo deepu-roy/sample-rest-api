@@ -18,6 +18,7 @@ const config = {
   },
   endpoints: {
     users: "/users",
+    roles: "/roles",
     health: "/health",
   },
   get apiUrl() {

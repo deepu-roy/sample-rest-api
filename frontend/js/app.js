@@ -79,7 +79,12 @@ function renderUsers(data) {
     }" class="user-avatar"></td>
             <td>${user.first_name} ${user.last_name}</td>
             <td>${user.email}</td>
-            <td>${user.job || "N/A"}</td>            <td>
+            <td>${user.job || "N/A"}</td>
+            <td>${user.role ? user.role.name : "User"}</td>
+            <td>
+                <a href="edit-user.html?id=${
+                  user.id
+                }" class="btn btn-sm btn-outline-primary me-2">Edit</a>
                 <i class="btn-delete" data-user-id="${
                   user.id
                 }" style="cursor: pointer;">🗑️</i>

@@ -20,8 +20,8 @@ const config = {
       if (process.env.CORS_ORIGINS) {
         return process.env.CORS_ORIGINS.split(",");
       }
-      // Default development configuration
-      return ["http://localhost:5000", "http://127.0.0.1:5000"];
+      // Default development configuration - allow all origins
+      return "*";
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

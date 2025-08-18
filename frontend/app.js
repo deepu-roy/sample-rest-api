@@ -3,6 +3,18 @@ import config from "./config.js";
 let currentPage = 1;
 const perPage = 6;
 
+// Create role badge with appropriate styling
+function createRoleBadge(role) {
+  if (!role || !role.name) {
+    return '<span class="badge role-badge role-user">User</span>';
+  }
+
+  const roleName = role.name.toLowerCase();
+  const roleClass = `role-${roleName}`;
+
+  return `<span class="badge role-badge ${roleClass}">${role.name}</span>`;
+}
+
 async function fetchUsers(page = 1) {
   try {
     const response = await fetch(
@@ -28,6 +40,11 @@ function renderUsers(data) {
 
   data.data.forEach((user) => {
     const row = document.createElement("tr");
+
+    // Handle role information with fallback for missing data
+    const roleInfo = user.role || { name: "User", id: 1 };
+    const roleBadge = createRoleBadge(roleInfo);
+
     row.innerHTML = `
             <td>${user.id}</td>
             <td><img src="${user.avatar}" alt="${
@@ -36,8 +53,16 @@ function renderUsers(data) {
             <td>${user.first_name} ${user.last_name}</td>
             <td>${user.email}</td>
             <td>${user.job || "N/A"}</td>
+            <td>${roleBadge}</td>
             <td>
-                <i class="btn-delete" onclick="deleteUser(${user.id})">🗑️</i>
+                <a href="edit-user.html?id=${
+                  user.id
+                }" class="btn btn-sm btn-outline-primary me-2" title="Edit User">
+                    ✏️
+                </a>
+                <i class="btn-delete" onclick="deleteUser(${
+                  user.id
+                })" title="Delete User">🗑️</i>
             </td>
         `;
     tbody.appendChild(row);
