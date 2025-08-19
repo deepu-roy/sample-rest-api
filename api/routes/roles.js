@@ -126,7 +126,13 @@ router.get("/:id", (req, res) => {
 
   // Validate that ID is a positive integer
   const numId = parseInt(id);
-  if (!id || id.trim() === "" || isNaN(numId) || numId <= 0) {
+  if (
+    !id ||
+    id.trim() === "" ||
+    isNaN(numId) ||
+    numId <= 0 ||
+    !/^\d+$/.test(id.trim())
+  ) {
     return res
       .status(400)
       .json({ error: "Invalid role ID. Must be a positive integer." });
@@ -223,7 +229,8 @@ router.post("/", (req, res) => {
   }
 
   const trimmedName = name.trim();
-  const trimmedDescription = description ? description.trim() : null;
+  const trimmedDescription =
+    description && description.trim() !== "" ? description.trim() : null;
 
   // Check if role name already exists
   db.get(
@@ -352,23 +359,29 @@ router.put("/:id", (req, res) => {
 
   // Validate that ID is a positive integer
   const numId = parseInt(id);
-  if (!id || id.trim() === "" || isNaN(numId) || numId <= 0) {
+  if (
+    !id ||
+    id.trim() === "" ||
+    isNaN(numId) ||
+    numId <= 0 ||
+    !/^\d+$/.test(id.trim())
+  ) {
     return res
       .status(400)
       .json({ error: "Invalid role ID. Must be a positive integer." });
-  }
-
-  // Validate that at least one field is provided
-  if (!name && description === undefined) {
-    return res.status(400).json({
-      error: "At least one field (name or description) must be provided",
-    });
   }
 
   // Validate name if provided
   if (name !== undefined && (typeof name !== "string" || name.trim() === "")) {
     return res.status(400).json({
       error: "Role name must be a non-empty string",
+    });
+  }
+
+  // Validate that at least one field is provided
+  if (!name && description === undefined) {
+    return res.status(400).json({
+      error: "At least one field (name or description) must be provided",
     });
   }
 
@@ -392,7 +405,7 @@ router.put("/:id", (req, res) => {
     const trimmedName = name ? name.trim() : existingRole.name;
     const trimmedDescription =
       description !== undefined
-        ? description
+        ? description && description.trim() !== ""
           ? description.trim()
           : null
         : existingRole.description;
@@ -509,7 +522,13 @@ router.delete("/:id", (req, res) => {
 
   // Validate that ID is a positive integer
   const numId = parseInt(id);
-  if (!id || id.trim() === "" || isNaN(numId) || numId <= 0) {
+  if (
+    !id ||
+    id.trim() === "" ||
+    isNaN(numId) ||
+    numId <= 0 ||
+    !/^\d+$/.test(id.trim())
+  ) {
     return res
       .status(400)
       .json({ error: "Invalid role ID. Must be a positive integer." });

@@ -115,7 +115,7 @@ router.get("/", (req, res) => {
   // Validate role filter if provided
   if (roleFilter !== undefined) {
     const roleId = parseInt(roleFilter);
-    if (isNaN(roleId) || roleId <= 0) {
+    if (isNaN(roleId) || roleId <= 0 || !/^\d+$/.test(roleFilter.toString())) {
       return res
         .status(400)
         .json({ error: "Invalid role parameter. Must be a positive integer." });
@@ -147,7 +147,7 @@ router.get("/", (req, res) => {
     const total_pages = Math.ceil(total / per_page);
 
     // Query users with optional role filter
-    const userQuery = `SELECT u.*, r.name as role_name, r.description as role_description 
+    const userQuery = `SELECT u.*, r.name as role_name, r.description as role_description, r.is_active as role_is_active 
                        FROM users u 
                        LEFT JOIN roles r ON u.role_id = r.id 
                        ${whereClause}
@@ -172,6 +172,7 @@ router.get("/", (req, res) => {
               id: row.role_id,
               name: row.role_name,
               description: row.role_description,
+              is_active: row.role_is_active,
             }
           : null,
       }));
@@ -218,7 +219,7 @@ router.get("/:id", (req, res) => {
   const id = req.params.id;
 
   db.get(
-    `SELECT u.*, r.name as role_name, r.description as role_description 
+    `SELECT u.*, r.name as role_name, r.description as role_description, r.is_active as role_is_active 
      FROM users u 
      LEFT JOIN roles r ON u.role_id = r.id 
      WHERE u.id = ?`,
@@ -245,6 +246,7 @@ router.get("/:id", (req, res) => {
               id: row.role_id,
               name: row.role_name,
               description: row.role_description,
+              is_active: row.role_is_active,
             }
           : null,
       };

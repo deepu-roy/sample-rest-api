@@ -161,7 +161,7 @@ describe("API Endpoints", () => {
 
     it("should update a user's role", async () => {
       const updateData = {
-        role_id: 3, // Moderator role
+        role_id: 2, // Admin role (we know this exists)
       };
 
       const res = await request(app)
@@ -176,8 +176,8 @@ describe("API Endpoints", () => {
         .get(`/api/users/${createdUserId}`)
         .expect(200);
 
-      expect(userRes.body.data).toHaveProperty("role_id", 3);
-      expect(userRes.body.data.role).toHaveProperty("name", "Moderator");
+      expect(userRes.body.data).toHaveProperty("role_id", 2);
+      expect(userRes.body.data.role).toHaveProperty("name", "Admin");
     });
 
     it("should reject role update with invalid role", async () => {
@@ -248,7 +248,7 @@ describe("API Endpoints", () => {
 
         const user3 = await request(app)
           .post("/api/users")
-          .send({ name: "Moderator Role3", job: "Test Moderator", role_id: 3 })
+          .send({ name: "User Role3", job: "Test User", role_id: 1 })
           .expect(201);
         userRole3Id = user3.body.id;
       });
@@ -294,16 +294,16 @@ describe("API Endpoints", () => {
         expect(testUser).toBeDefined();
       });
 
-      it("should filter users by moderator role", async () => {
-        const res = await request(app).get("/api/users?role=3").expect(200);
+      it("should filter users by user role", async () => {
+        const res = await request(app).get("/api/users?role=1").expect(200);
 
         expect(res.body).toHaveProperty("data");
         expect(Array.isArray(res.body.data)).toBeTruthy();
 
-        // All returned users should have role_id = 3
+        // All returned users should have role_id = 1
         res.body.data.forEach((user) => {
-          expect(user.role_id).toBe(3);
-          expect(user.role.name).toBe("Moderator");
+          expect(user.role_id).toBe(1);
+          expect(user.role.name).toBe("User");
         });
 
         // Should include our test user

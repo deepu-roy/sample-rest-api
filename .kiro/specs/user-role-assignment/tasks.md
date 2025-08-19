@@ -98,7 +98,7 @@
 
 -
 
-- [ ] 10. Write comprehensive tests for remaining role functionality
+- [-] 10. Write comprehensive tests for remaining role functionality
 
   - Write unit tests for role creation, editing, and deactivation API endpoints
   - Create integration tests for role management interface functionality

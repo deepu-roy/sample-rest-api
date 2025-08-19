@@ -81,17 +81,20 @@ function renderRoles(roles) {
       <td>${statusBadge}</td>
       <td>${createdDate}</td>
       <td>
-        <button class="btn btn-sm btn-outline-primary me-2" onclick="editRole(${
+        <button class="btn btn-sm btn-outline-primary me-2" data-role-id="${
           role.id
-        })" title="Edit Role">
+        }" data-action="edit" title="Edit Role">
           ✏️ Edit
         </button>
         ${
           role.is_active
             ? `
-          <button class="btn btn-sm btn-outline-danger" onclick="confirmDeactivateRole(${
+          <button class="btn btn-sm btn-outline-danger" data-role-id="${
             role.id
-          }, '${escapeHtml(role.name)}')" title="Deactivate Role">
+          }" data-role-name="${escapeHtml(role.name).replace(
+                /"/g,
+                "&quot;"
+              )}" data-action="deactivate" title="Deactivate Role">
             🚫 Deactivate
           </button>
         `
@@ -100,6 +103,22 @@ function renderRoles(roles) {
       </td>
     `;
     tbody.appendChild(row);
+  });
+
+  // Add event listeners for action buttons
+  tbody.addEventListener("click", (e) => {
+    const button = e.target.closest("button[data-action]");
+    if (!button) return;
+
+    const roleId = parseInt(button.dataset.roleId);
+    const action = button.dataset.action;
+
+    if (action === "edit") {
+      editRole(roleId);
+    } else if (action === "deactivate") {
+      const roleName = button.dataset.roleName;
+      confirmDeactivateRole(roleId, roleName);
+    }
   });
 }
 
