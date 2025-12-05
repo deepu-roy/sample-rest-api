@@ -1,27 +1,14 @@
 import config from "./config.js";
 
-let currentEditingRole = null;
+// Modal helper functions
+window.closeDeactivateModal = function () {
+  document.getElementById("deactivateModal").classList.add("hidden");
+};
 
 // Initialize the page
 document.addEventListener("DOMContentLoaded", () => {
   loadRoles();
-  setupEventListeners();
 });
-
-function setupEventListeners() {
-  // Form submission
-  document.getElementById("roleForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    saveRole();
-  });
-
-  // Modal cleanup on close
-  document
-    .getElementById("roleModal")
-    .addEventListener("hidden.bs.modal", () => {
-      resetForm();
-    });
-}
 
 async function loadRoles() {
   try {
@@ -57,7 +44,7 @@ function renderRoles(roles) {
   if (!roles || roles.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="text-center text-muted">No roles found</td>
+        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No roles found</td>
       </tr>
     `;
     return;
@@ -65,41 +52,47 @@ function renderRoles(roles) {
 
   roles.forEach((role) => {
     const row = document.createElement("tr");
+    row.className = "hover:bg-blue-50 transition-colors duration-150";
 
     const statusBadge = role.is_active
-      ? '<span class="badge bg-success">Active</span>'
-      : '<span class="badge bg-secondary">Inactive</span>';
+      ? '<span class="status-badge-active">Active</span>'
+      : '<span class="status-badge-inactive">Inactive</span>';
 
     const createdDate = role.created_at
       ? new Date(role.created_at).toLocaleDateString()
       : "N/A";
 
     row.innerHTML = `
-      <td>${role.id}</td>
-      <td><strong>${escapeHtml(role.name)}</strong></td>
-      <td>${escapeHtml(role.description || "No description")}</td>
-      <td>${statusBadge}</td>
-      <td>${createdDate}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary me-2" data-role-id="${
-          role.id
-        }" data-action="edit" title="Edit Role">
-          ✏️ Edit
-        </button>
-        ${
-          role.is_active
-            ? `
-          <button class="btn btn-sm btn-outline-danger" data-role-id="${
-            role.id
-          }" data-role-name="${escapeHtml(role.name).replace(
-                /"/g,
-                "&quot;"
-              )}" data-action="deactivate" title="Deactivate Role">
-            🚫 Deactivate
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${role.id}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${escapeHtml(role.name)}</td>
+      <td class="px-6 py-4 text-sm text-gray-600">${escapeHtml(role.description || "No description")}</td>
+      <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${createdDate}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+        <div class="flex items-center gap-2">
+          <button class="btn-edit" data-role-id="${role.id
+      }" data-action="edit" title="Edit Role">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </button>
+          ${role.is_active
+        ? `
+          <button class="btn-deactivate" data-role-id="${role.id
+        }" data-role-name="${escapeHtml(role.name).replace(
+          /"/g,
+          "&quot;"
+        )}" data-action="deactivate" title="Deactivate Role">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            Deactivate
           </button>
         `
-            : ""
-        }
+        : ""
+      }
+        </div>
       </td>
     `;
     tbody.appendChild(row);
@@ -114,7 +107,7 @@ function renderRoles(roles) {
     const action = button.dataset.action;
 
     if (action === "edit") {
-      editRole(roleId);
+      window.location.href = `edit-role.html?id=${roleId}`;
     } else if (action === "deactivate") {
       const roleName = button.dataset.roleName;
       confirmDeactivateRole(roleId, roleName);
@@ -122,165 +115,7 @@ function renderRoles(roles) {
   });
 }
 
-function openCreateRoleModal() {
-  currentEditingRole = null;
-  document.getElementById("roleModalLabel").textContent = "Create New Role";
-  document.getElementById("saveRoleBtn").textContent = "Create Role";
-  resetForm();
-}
 
-async function editRole(roleId) {
-  try {
-    // Fetch the specific role data from the API
-    const response = await fetch(
-      `${config.api.url}${config.endpoints.roles}/${roleId}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const response_data = await response.json();
-    const role = response_data.data || response_data;
-
-    currentEditingRole = {
-      id: role.id,
-      name: role.name,
-      description: role.description || "",
-    };
-
-    // Populate the form
-    document.getElementById("roleId").value = role.id;
-    document.getElementById("roleName").value = role.name;
-    document.getElementById("roleDescription").value = role.description || "";
-
-    // Update modal title and button
-    document.getElementById("roleModalLabel").textContent = "Edit Role";
-    document.getElementById("saveRoleBtn").textContent = "Update Role";
-
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById("roleModal"));
-    modal.show();
-  } catch (error) {
-    console.error("Error fetching role for editing:", error);
-    showMessage("Error loading role data. Please try again.", "danger");
-  }
-}
-
-async function saveRole() {
-  const form = document.getElementById("roleForm");
-  const formData = new FormData(form);
-
-  const roleData = {
-    name: formData.get("roleName").trim(),
-    description: formData.get("roleDescription").trim(),
-  };
-
-  // Validate form
-  if (!validateRoleForm(roleData)) {
-    return;
-  }
-
-  const isEditing = currentEditingRole !== null;
-  const url = isEditing
-    ? `${config.api.url}${config.endpoints.roles}/${currentEditingRole.id}`
-    : `${config.api.url}${config.endpoints.roles}`;
-
-  const method = isEditing ? "PUT" : "POST";
-
-  try {
-    // Disable save button during request
-    const saveBtn = document.getElementById("saveRoleBtn");
-    saveBtn.disabled = true;
-    saveBtn.textContent = isEditing ? "Updating..." : "Creating...";
-
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(roleData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    // Success
-    const action = isEditing ? "updated" : "created";
-    showMessage(`Role "${roleData.name}" ${action} successfully!`, "success");
-
-    // Close modal and reload roles
-    const modal = bootstrap.Modal.getInstance(
-      document.getElementById("roleModal")
-    );
-    modal.hide();
-    loadRoles();
-  } catch (error) {
-    console.error(`Error ${isEditing ? "updating" : "creating"} role:`, error);
-    showMessage(
-      error.message ||
-        `Error ${isEditing ? "updating" : "creating"} role. Please try again.`,
-      "danger"
-    );
-  } finally {
-    // Re-enable save button
-    const saveBtn = document.getElementById("saveRoleBtn");
-    saveBtn.disabled = false;
-    saveBtn.textContent = isEditing ? "Update Role" : "Create Role";
-  }
-}
-
-function validateRoleForm(roleData) {
-  let isValid = true;
-
-  // Clear previous errors
-  clearFormErrors();
-
-  // Validate role name
-  if (!roleData.name) {
-    showFieldError("roleName", "Role name is required");
-    isValid = false;
-  } else if (roleData.name.length > 50) {
-    showFieldError("roleName", "Role name must be 50 characters or less");
-    isValid = false;
-  }
-
-  // Validate description length
-  if (roleData.description && roleData.description.length > 255) {
-    showFieldError(
-      "roleDescription",
-      "Description must be 255 characters or less"
-    );
-    isValid = false;
-  }
-
-  return isValid;
-}
-
-function clearFormErrors() {
-  const errorElements = document.querySelectorAll(".invalid-feedback");
-  errorElements.forEach((el) => (el.textContent = ""));
-
-  const inputElements = document.querySelectorAll(".form-control");
-  inputElements.forEach((el) => el.classList.remove("is-invalid"));
-}
-
-function showFieldError(fieldId, message) {
-  const field = document.getElementById(fieldId);
-  const errorElement = document.getElementById(fieldId + "Error");
-
-  field.classList.add("is-invalid");
-  errorElement.textContent = message;
-}
 
 function confirmDeactivateRole(roleId, roleName) {
   document.getElementById("deactivateRoleName").textContent = roleName;
@@ -290,8 +125,7 @@ function confirmDeactivateRole(roleId, roleName) {
   confirmBtn.onclick = () => deactivateRole(roleId, roleName);
 
   // Show the modal
-  const modal = new bootstrap.Modal(document.getElementById("deactivateModal"));
-  modal.show();
+  document.getElementById("deactivateModal").classList.remove("hidden");
 }
 
 async function deactivateRole(roleId, roleName) {
@@ -322,10 +156,7 @@ async function deactivateRole(roleId, roleName) {
     showMessage(`Role "${roleName}" deactivated successfully!`, "success");
 
     // Close modal and reload roles
-    const modal = bootstrap.Modal.getInstance(
-      document.getElementById("deactivateModal")
-    );
-    modal.hide();
+    closeDeactivateModal();
     loadRoles();
   } catch (error) {
     console.error("Error deactivating role:", error);
@@ -341,20 +172,29 @@ async function deactivateRole(roleId, roleName) {
   }
 }
 
-function resetForm() {
-  const form = document.getElementById("roleForm");
-  form.reset();
-  clearFormErrors();
-  currentEditingRole = null;
-}
+
 
 function showMessage(message, type) {
   const container = document.getElementById("messageContainer");
   const alertDiv = document.createElement("div");
-  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+
+  const typeClasses = {
+    success: "bg-green-50 border-l-4 border-green-500 text-green-700",
+    danger: "bg-red-50 border-l-4 border-red-500 text-red-700",
+    warning: "bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700",
+    info: "bg-blue-50 border-l-4 border-blue-500 text-blue-700"
+  };
+
+  alertDiv.className = `${typeClasses[type] || typeClasses.info} p-4 rounded-r-lg shadow-sm mb-4 fade-in`;
   alertDiv.innerHTML = `
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="flex items-center justify-between">
+      <p>${message}</p>
+      <button type="button" class="ml-4 text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.remove()">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </button>
+    </div>
   `;
 
   container.innerHTML = "";
@@ -372,13 +212,13 @@ function showMessage(message, type) {
 
 function showApiStatus(message) {
   const statusDiv = document.getElementById("apiStatus");
-  statusDiv.textContent = message;
-  statusDiv.classList.remove("d-none");
+  statusDiv.innerHTML = `<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>${message}</div>`;
+  statusDiv.classList.remove("hidden");
 }
 
 function hideApiStatus() {
   const statusDiv = document.getElementById("apiStatus");
-  statusDiv.classList.add("d-none");
+  statusDiv.classList.add("hidden");
 }
 
 function escapeHtml(text) {
@@ -388,7 +228,4 @@ function escapeHtml(text) {
 }
 
 // Make functions available globally for onclick handlers
-window.editRole = editRole;
 window.confirmDeactivateRole = confirmDeactivateRole;
-window.openCreateRoleModal = openCreateRoleModal;
-window.saveRole = saveRole;

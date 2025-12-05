@@ -41,9 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // API returns user wrapped in a 'data' property
         currentUser = result.data || result;
         console.log("Extracted user data:", currentUser);
-        originalRoleId =
-          currentUser.role_id ||
-          (currentUser.role ? currentUser.role.id : null);
+
+        const rawRoleId = currentUser.role_id || (currentUser.role ? currentUser.role.id : null);
+        originalRoleId = rawRoleId ? parseInt(rawRoleId) : null;
+
         console.log("Original role ID:", originalRoleId);
       } else if (response.status === 404) {
         throw new Error("User not found");
@@ -111,7 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
       option.textContent = role.name;
 
       // Select current role
-      if (originalRoleId && role.id === originalRoleId) {
+      // Ensure we compare numbers
+      if (originalRoleId && parseInt(role.id) === parseInt(originalRoleId)) {
         console.log(
           `Selecting role ${role.name} (ID: ${role.id}) as current role`
         );
@@ -119,6 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (!originalRoleId && role.name.toLowerCase() === "user") {
         console.log(`Selecting default User role (ID: ${role.id})`);
         option.selected = true;
+        // If user had no role, treat default 'User' role as their original role to avoid unnecessary warnings
+        originalRoleId = role.id;
       }
 
       roleSelect.appendChild(option);
@@ -128,14 +132,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showForm() {
-    document.getElementById("loadingState").style.display = "none";
-    document.getElementById("editUserForm").style.display = "block";
+    document.getElementById("loadingState").classList.add("hidden");
+    document.getElementById("editUserForm").classList.remove("hidden");
   }
 
   function showError(message) {
-    document.getElementById("loadingState").style.display = "none";
+    document.getElementById("loadingState").classList.add("hidden");
     document.getElementById("errorMessage").textContent = message;
-    document.getElementById("errorState").style.display = "block";
+    document.getElementById("errorState").classList.remove("hidden");
   }
 
   function showAlert(message, type = "danger") {
@@ -165,21 +169,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function checkRoleChange() {
     const selectedRoleId = parseInt(roleSelect.value);
+    // Ensure originalRoleId is treated as number for comparison
+    const currentOriginalRoleId = originalRoleId ? parseInt(originalRoleId) : null;
+
     const selectedRole = availableRoles.find(
       (role) => role.id === selectedRoleId
     );
     const originalRole = availableRoles.find(
-      (role) => role.id === originalRoleId
+      (role) => role.id === currentOriginalRoleId
     ) || { name: "User" };
 
-    if (selectedRoleId !== originalRoleId) {
+    if (selectedRoleId !== currentOriginalRoleId) {
       // Show role change warning
       document.getElementById("oldRoleName").textContent = originalRole.name;
-      document.getElementById("newRoleName").textContent = selectedRole.name;
-      roleChangeWarning.classList.remove("d-none");
+      document.getElementById("newRoleName").textContent = selectedRole ? selectedRole.name : "Unknown";
+      roleChangeWarning.classList.remove("hidden");
     } else {
       // Hide role change warning
-      roleChangeWarning.classList.add("d-none");
+      roleChangeWarning.classList.add("hidden");
     }
   }
 
@@ -206,7 +213,8 @@ document.addEventListener("DOMContentLoaded", () => {
     saveButton.textContent = "Saving...";
 
     const selectedRoleId = parseInt(roleInput.value);
-    const isRoleChanged = selectedRoleId !== originalRoleId;
+    const currentOriginalRoleId = originalRoleId ? parseInt(originalRoleId) : null;
+    const isRoleChanged = selectedRoleId !== currentOriginalRoleId;
 
     // Show confirmation for role changes
     if (isRoleChanged) {
@@ -214,7 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (role) => role.id === selectedRoleId
       );
       const originalRole = availableRoles.find(
-        (role) => role.id === originalRoleId
+        (role) => role.id === currentOriginalRoleId
       ) || { name: "User" };
 
       const confirmMessage = `Are you sure you want to change this user's role from "${originalRole.name}" to "${selectedRole.name}"? This will affect their permissions.`;
@@ -269,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
         originalRoleId = selectedRoleId;
 
         // Hide role change warning
-        roleChangeWarning.classList.add("d-none");
+        roleChangeWarning.classList.add("hidden");
 
         // Redirect after a short delay
         setTimeout(() => {

@@ -402,8 +402,8 @@ router.put("/:id", (req, res) => {
       return res.status(404).json({ error: "Role not found" });
     }
 
-    const trimmedName = name ? name.trim() : existingRole.name;
-    const trimmedDescription =
+    const newName = name !== undefined ? name.trim() : existingRole.name;
+    const newDescription =
       description !== undefined
         ? description && description.trim() !== ""
           ? description.trim()
@@ -411,10 +411,10 @@ router.put("/:id", (req, res) => {
         : existingRole.description;
 
     // Check if new name conflicts with existing role (if name is being changed)
-    if (name && trimmedName !== existingRole.name) {
+    if (name !== undefined && newName !== existingRole.name) {
       db.get(
         "SELECT id FROM roles WHERE name = ? COLLATE NOCASE AND id != ?",
-        [trimmedName, id],
+        [newName, id],
         (err, conflictingRole) => {
           if (err) {
             return res.status(500).json({ error: err.message });
@@ -436,7 +436,7 @@ router.put("/:id", (req, res) => {
     function updateRole() {
       db.run(
         "UPDATE roles SET name = ?, description = ? WHERE id = ?",
-        [trimmedName, trimmedDescription, id],
+        [newName, newDescription, id],
         function (err) {
           if (err) {
             return res.status(500).json({ error: err.message });

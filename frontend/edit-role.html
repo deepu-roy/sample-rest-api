@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create New User</title>
+    <title>Edit Role</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css" />
     <!-- Environment Configuration -->
@@ -19,9 +19,9 @@
           <h1
             class="text-3xl font-bold bg-gradient-to-r from-teal-600 to-purple-600 bg-clip-text text-transparent"
           >
-            Create New User
+            Edit Role
           </h1>
-          <a href="index.html" class="btn-outline">
+          <a href="roles.html" class="btn-outline">
             <svg
               class="w-5 h-5"
               fill="none"
@@ -35,7 +35,7 @@
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back to Users
+            Back to Roles
           </a>
         </div>
       </div>
@@ -72,66 +72,52 @@
         </div>
       </div>
 
+      <!-- Success/Error Messages -->
+      <div id="messageContainer"></div>
+
       <!-- Form Card -->
       <div
         class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100"
       >
         <div class="p-8 md:p-10">
-          <form id="createUserForm" class="space-y-6">
+          <form id="editRoleForm" class="space-y-6">
+            <input type="hidden" id="roleId" name="roleId" />
             <div>
-              <label for="name" class="form-label">Full Name</label>
+              <label for="roleName" class="form-label">Role Name</label>
               <input
                 type="text"
                 class="form-input"
-                id="name"
-                name="name"
+                id="roleName"
+                name="roleName"
                 required
-                placeholder="Enter full name"
+                maxlength="50"
+                placeholder="Enter role name"
               />
-            </div>
-
-            <div>
-              <label for="job" class="form-label">Job</label>
-              <input
-                type="text"
-                class="form-input"
-                id="job"
-                name="job"
-                required
-                placeholder="Enter job title"
-              />
-            </div>
-
-            <div>
-              <label for="role" class="form-label">Role</label>
-              <select class="form-input" id="role" name="role" required>
-                <option value="">Loading roles...</option>
-              </select>
               <p class="text-sm text-gray-500 mt-2">
-                Select a role for this user
+                A unique identifier for this role (e.g., Admin, Moderator, User)
               </p>
             </div>
 
-            <div
-              class="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-100 mt-8"
-            >
-              <a href="index.html" class="btn-outline">
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Cancel
-              </a>
-              <button type="submit" class="btn-primary">
+            <div>
+              <label for="roleDescription" class="form-label"
+                >Description</label
+              >
+              <textarea
+                class="form-input"
+                id="roleDescription"
+                name="roleDescription"
+                rows="4"
+                maxlength="255"
+                placeholder="Enter role description"
+              ></textarea>
+              <p class="text-sm text-gray-500 mt-2">
+                Brief description of the role's permissions and responsibilities
+              </p>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-4">
+              <a href="roles.html" class="btn-outline"> Cancel </a>
+              <button type="submit" class="btn-primary" id="saveRoleBtn">
                 <svg
                   class="w-5 h-5"
                   fill="none"
@@ -145,7 +131,7 @@
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Create User
+                Update Role
               </button>
             </div>
           </form>
@@ -153,6 +139,6 @@
       </div>
     </main>
 
-    <script src="js/create-user.js" type="module"></script>
+    <script src="js/edit-role.js" type="module"></script>
   </body>
 </html>

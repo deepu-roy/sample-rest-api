@@ -169,11 +169,11 @@ router.get("/", (req, res) => {
         role_id: row.role_id,
         role: row.role_name
           ? {
-              id: row.role_id,
-              name: row.role_name,
-              description: row.role_description,
-              is_active: row.role_is_active,
-            }
+            id: row.role_id,
+            name: row.role_name,
+            description: row.role_description,
+            is_active: row.role_is_active,
+          }
           : null,
       }));
 
@@ -243,11 +243,11 @@ router.get("/:id", (req, res) => {
         role_id: row.role_id,
         role: row.role_name
           ? {
-              id: row.role_id,
-              name: row.role_name,
-              description: row.role_description,
-              is_active: row.role_is_active,
-            }
+            id: row.role_id,
+            name: row.role_name,
+            description: row.role_description,
+            is_active: row.role_is_active,
+          }
           : null,
       };
 
@@ -314,12 +314,10 @@ router.post("/", (req, res) => {
       }
 
       const [first_name, last_name] = name.split(" ");
-      const email = `${first_name.toLowerCase()}.${
-        last_name ? last_name.toLowerCase() : "doe"
-      }@reqres.in`;
-      const avatar = `https://reqres.in/img/faces/${
-        Math.floor(Math.random() * 10) + 1
-      }-image.jpg`;
+      const email = `${first_name.toLowerCase()}.${last_name ? last_name.toLowerCase() : "doe"
+        }@reqres.in`;
+      const avatar = `https://reqres.in/img/faces/${Math.floor(Math.random() * 10) + 1
+        }-image.jpg`;
 
       db.run(
         "INSERT INTO users (first_name, last_name, email, avatar, job, role_id) VALUES (?, ?, ?, ?, ?, ?)",
@@ -383,10 +381,10 @@ router.post("/", (req, res) => {
  */
 router.put("/:id", (req, res) => {
   const id = req.params.id;
-  const { name, job, role_id } = req.body;
+  const { name, first_name, last_name, job, role_id } = req.body;
 
-  if (!name && !job && !role_id) {
-    return res.status(400).json({ error: "Name, job, or role_id is required" });
+  if (!name && !first_name && !last_name && !job && !role_id) {
+    return res.status(400).json({ error: "Name (or first_name/last_name), job, or role_id is required" });
   }
 
   // First, check if user exists and get current role for audit logging
@@ -426,9 +424,18 @@ router.put("/:id", (req, res) => {
       let params = [];
 
       if (name) {
-        const [first_name, last_name] = name.split(" ");
+        const [fName, lName] = name.split(" ");
         updates.push("first_name = ?", "last_name = ?");
-        params.push(first_name, last_name || "");
+        params.push(fName, lName || "");
+      } else {
+        if (first_name) {
+          updates.push("first_name = ?");
+          params.push(first_name);
+        }
+        if (last_name) {
+          updates.push("last_name = ?");
+          params.push(last_name);
+        }
       }
 
       if (job) {
@@ -454,16 +461,28 @@ router.put("/:id", (req, res) => {
           // Log role change for audit purposes
           if (role_id && role_id !== currentUser.role_id) {
             console.log(
-              `AUDIT: User ${id} role changed from ${
-                currentUser.role_id
+              `AUDIT: User ${id} role changed from ${currentUser.role_id
               } to ${role_id} at ${new Date().toISOString()}`
             );
           }
 
-          res.json({
-            name: name || "",
-            job: job || "",
-            updatedAt: new Date().toISOString(),
+          // Fetch updated user to return correct name
+          db.get("SELECT * FROM users WHERE id = ?", [id], (err, updatedUser) => {
+            if (err || !updatedUser) {
+              // Fallback if fetch fails
+              return res.json({
+                name: name || `${first_name || ""} ${last_name || ""}`.trim(),
+                job: job || "",
+                updatedAt: new Date().toISOString(),
+              });
+            }
+
+            res.json({
+              name: `${updatedUser.first_name} ${updatedUser.last_name}`.trim(),
+              job: updatedUser.job,
+              role_id: updatedUser.role_id,
+              updatedAt: new Date().toISOString(),
+            });
           });
         }
       );
