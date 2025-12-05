@@ -1,5 +1,5 @@
-import config from './config';
-import { SingleRoleResponse } from './types';
+import config from './config.js';
+import { SingleRoleResponse } from './types/index.js';
 
 const editRoleForm = document.getElementById('editRoleForm') as HTMLFormElement | null;
 const apiStatus = document.getElementById('apiStatus');

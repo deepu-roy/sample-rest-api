@@ -1,5 +1,5 @@
-import config from './config';
-import { Role, RolesResponse, CreateUserResponse } from './types';
+import config from './config.js';
+import { Role, RolesResponse, CreateUserResponse } from './types/index.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('createUserForm') as HTMLFormElement | null;

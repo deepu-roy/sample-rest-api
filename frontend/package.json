@@ -1,26 +1,26 @@
 {
-  "name": "sample-rest-api-frontend",
-  "version": "1.0.0",
-  "description": "Frontend for the Sample REST API",
-  "main": "server.js",
-  "scripts": {
-    "build": "tsc && cp *.html dist/",
-    "start": "http-server dist -p 3001 --cors",
-    "dev": "tsc --watch",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "http-server": "^14.1.1"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.16.0",
-    "@types/node": "^20.10.0",
-    "eslint": "^9.16.0",
-    "eslint-config-prettier": "^9.1.0",
-    "prettier": "^3.4.2",
-    "typescript": "^5.3.3",
-    "typescript-eslint": "^8.17.0"
-  }
+    "name": "sample-rest-api-frontend",
+    "version": "1.0.0",
+    "description": "Frontend for the Sample REST API",
+    "main": "server.js",
+    "scripts": {
+        "build": "tsc && cp *.html dist/ && cp -r css dist/",
+        "start": "http-server dist -p 3001 --cors",
+        "dev": "tsc --watch",
+        "lint": "eslint src/**/*.ts",
+        "lint:fix": "eslint src/**/*.ts --fix",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "http-server": "^14.1.1"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.16.0",
+        "@types/node": "^20.10.0",
+        "eslint": "^9.16.0",
+        "eslint-config-prettier": "^9.1.0",
+        "prettier": "^3.4.2",
+        "typescript": "^5.3.3",
+        "typescript-eslint": "^8.17.0"
+    }
 }

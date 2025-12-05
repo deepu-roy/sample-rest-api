@@ -1,4 +1,4 @@
-import { Config, EnvConfig } from './types';
+import { Config, EnvConfig } from './types/index.js';
 
 // Runtime configuration that can be injected
 const defaultEnv: EnvConfig = {

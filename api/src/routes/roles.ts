@@ -19,7 +19,7 @@
  */
 
 import express, { Request, Response } from 'express';
-import { db } from '../db/init';
+import { dbAll, dbGet, dbRun } from '../db/init';
 import { RoleRow, CreateRoleRequest, UpdateRoleRequest } from '../types';
 
 const router = express.Router();
@@ -41,24 +41,24 @@ interface RoleQueryParams {
  *       500:
  *         description: Internal server error
  */
-router.get('/', (req: Request<unknown, unknown, unknown, RoleQueryParams>, res: Response) => {
-    // Check if we should show all roles (for management) or just active ones
-    const showAll = req.query.all === 'true';
-    const query = showAll
-        ? 'SELECT * FROM roles ORDER BY name'
-        : 'SELECT * FROM roles WHERE is_active = 1 ORDER BY name';
+router.get(
+    '/',
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async (req: Request<unknown, unknown, unknown, RoleQueryParams>, res: Response) => {
+        try {
+            const showAll = req.query.all === 'true';
+            const query = showAll
+                ? 'SELECT * FROM roles ORDER BY name'
+                : 'SELECT * FROM roles WHERE is_active = 1 ORDER BY name';
 
-    db.all(query, [], (err, rows: RoleRow[]) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
+            const rows = await dbAll<RoleRow>(query);
+            res.json({ data: rows });
+        } catch (err) {
+            const error = err as Error;
+            res.status(500).json({ error: error.message });
         }
-
-        res.json({
-            data: rows,
-        });
-    });
-});
+    }
+);
 
 /**
  * @swagger
@@ -84,28 +84,34 @@ router.get('/', (req: Request<unknown, unknown, unknown, RoleQueryParams>, res: 
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', (req: Request, res: Response) => {
-    const id = req.params.id;
+router.get(
+    '/:id',
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
 
-    // Validate that ID is a positive integer
-    const numId = parseInt(id);
-    if (!id || id.trim() === '' || isNaN(numId) || numId <= 0 || !/^\d+$/.test(id.trim())) {
-        res.status(400).json({ error: 'Invalid role ID. Must be a positive integer.' });
-        return;
+            // Validate that ID is a positive integer
+            const numId = parseInt(id);
+            if (!id || id.trim() === '' || isNaN(numId) || numId <= 0 || !/^\d+$/.test(id.trim())) {
+                res.status(400).json({ error: 'Invalid role ID. Must be a positive integer.' });
+                return;
+            }
+
+            const row = await dbGet<RoleRow>('SELECT * FROM roles WHERE id = ?', [id]);
+
+            if (!row) {
+                res.status(404).json({ error: 'Role not found' });
+                return;
+            }
+
+            res.json({ data: row });
+        } catch (err) {
+            const error = err as Error;
+            res.status(500).json({ error: error.message });
+        }
     }
-
-    db.get('SELECT * FROM roles WHERE id = ?', [id], (err, row: RoleRow | undefined) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        if (!row) {
-            res.status(404).json({ error: 'Role not found' });
-            return;
-        }
-        res.json({ data: row });
-    });
-});
+);
 
 /**
  * @swagger
@@ -139,37 +145,38 @@ router.get('/:id', (req: Request, res: Response) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', (req: Request<unknown, unknown, CreateRoleRequest>, res: Response) => {
-    const { name, description } = req.body;
+router.post(
+    '/',
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async (req: Request<unknown, unknown, CreateRoleRequest>, res: Response) => {
+        try {
+            const { name, description } = req.body;
 
-    // Validate required fields
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-        res.status(400).json({
-            error: 'Role name is required and must be a non-empty string',
-        });
-        return;
-    }
-
-    // Validate description if provided
-    if (description !== undefined && typeof description !== 'string') {
-        res.status(400).json({
-            error: 'Role description must be a string',
-        });
-        return;
-    }
-
-    const trimmedName = name.trim();
-    const trimmedDescription = description && description.trim() !== '' ? description.trim() : null;
-
-    // Check if role name already exists
-    db.get(
-        'SELECT id FROM roles WHERE name = ? COLLATE NOCASE',
-        [trimmedName],
-        (err, existingRole: RoleRow | undefined) => {
-            if (err) {
-                res.status(500).json({ error: err.message });
+            // Validate required fields
+            if (!name || typeof name !== 'string' || name.trim() === '') {
+                res.status(400).json({
+                    error: 'Role name is required and must be a non-empty string',
+                });
                 return;
             }
+
+            // Validate description if provided
+            if (description !== undefined && typeof description !== 'string') {
+                res.status(400).json({
+                    error: 'Role description must be a string',
+                });
+                return;
+            }
+
+            const trimmedName = name.trim();
+            const trimmedDescription =
+                description && description.trim() !== '' ? description.trim() : null;
+
+            // Check if role name already exists
+            const existingRole = await dbGet<RoleRow>(
+                'SELECT id FROM roles WHERE name = ? COLLATE NOCASE',
+                [trimmedName]
+            );
 
             if (existingRole) {
                 res.status(409).json({
@@ -179,38 +186,26 @@ router.post('/', (req: Request<unknown, unknown, CreateRoleRequest>, res: Respon
             }
 
             // Insert new role
-            db.run(
-                'INSERT INTO roles (name, description) VALUES (?, ?)',
-                [trimmedName, trimmedDescription],
-                function (err) {
-                    if (err) {
-                        res.status(500).json({ error: err.message });
-                        return;
-                    }
+            const result = await dbRun('INSERT INTO roles (name, description) VALUES (?, ?)', [
+                trimmedName,
+                trimmedDescription,
+            ]);
 
-                    const lastId = this.lastID;
+            // Fetch the created role
+            const newRole = await dbGet<RoleRow>('SELECT * FROM roles WHERE id = ?', [
+                result.lastID,
+            ]);
 
-                    // Fetch the created role
-                    db.get(
-                        'SELECT * FROM roles WHERE id = ?',
-                        [lastId],
-                        (err, newRole: RoleRow | undefined) => {
-                            if (err) {
-                                res.status(500).json({ error: err.message });
-                                return;
-                            }
-
-                            res.status(201).json({
-                                message: 'Role created successfully',
-                                data: newRole,
-                            });
-                        }
-                    );
-                }
-            );
+            res.status(201).json({
+                message: 'Role created successfully',
+                data: newRole,
+            });
+        } catch (err) {
+            const error = err as Error;
+            res.status(500).json({ error: error.message });
         }
-    );
-});
+    }
+);
 
 /**
  * @swagger
@@ -251,117 +246,96 @@ router.post('/', (req: Request<unknown, unknown, CreateRoleRequest>, res: Respon
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', (req: Request<{ id: string }, unknown, UpdateRoleRequest>, res: Response) => {
-    const id = req.params.id;
-    const { name, description } = req.body;
+router.put(
+    '/:id',
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async (req: Request<{ id: string }, unknown, UpdateRoleRequest>, res: Response) => {
+        try {
+            const id = req.params.id;
+            const { name, description } = req.body;
 
-    // Validate that ID is a positive integer
-    const numId = parseInt(id);
-    if (!id || id.trim() === '' || isNaN(numId) || numId <= 0 || !/^\d+$/.test(id.trim())) {
-        res.status(400).json({ error: 'Invalid role ID. Must be a positive integer.' });
-        return;
-    }
+            // Validate that ID is a positive integer
+            const numId = parseInt(id);
+            if (!id || id.trim() === '' || isNaN(numId) || numId <= 0 || !/^\d+$/.test(id.trim())) {
+                res.status(400).json({ error: 'Invalid role ID. Must be a positive integer.' });
+                return;
+            }
 
-    // Validate name if provided
-    if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
-        res.status(400).json({
-            error: 'Role name must be a non-empty string',
-        });
-        return;
-    }
+            // Validate name if provided
+            if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+                res.status(400).json({
+                    error: 'Role name must be a non-empty string',
+                });
+                return;
+            }
 
-    // Validate that at least one field is provided
-    if (!name && description === undefined) {
-        res.status(400).json({
-            error: 'At least one field (name or description) must be provided',
-        });
-        return;
-    }
+            // Validate that at least one field is provided
+            if (!name && description === undefined) {
+                res.status(400).json({
+                    error: 'At least one field (name or description) must be provided',
+                });
+                return;
+            }
 
-    // Validate description if provided
-    if (description !== undefined && typeof description !== 'string') {
-        res.status(400).json({
-            error: 'Role description must be a string',
-        });
-        return;
-    }
+            // Validate description if provided
+            if (description !== undefined && typeof description !== 'string') {
+                res.status(400).json({
+                    error: 'Role description must be a string',
+                });
+                return;
+            }
 
-    // Check if role exists
-    db.get('SELECT * FROM roles WHERE id = ?', [id], (err, existingRole: RoleRow | undefined) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
+            // Check if role exists
+            const existingRole = await dbGet<RoleRow>('SELECT * FROM roles WHERE id = ?', [id]);
 
-        if (!existingRole) {
-            res.status(404).json({ error: 'Role not found' });
-            return;
-        }
+            if (!existingRole) {
+                res.status(404).json({ error: 'Role not found' });
+                return;
+            }
 
-        const newName = name !== undefined ? name.trim() : existingRole.name;
-        const newDescription =
-            description !== undefined
-                ? description && description.trim() !== ''
-                    ? description.trim()
-                    : null
-                : existingRole.description;
+            const newName = name !== undefined ? name.trim() : existingRole.name;
+            const newDescription =
+                description !== undefined
+                    ? description && description.trim() !== ''
+                        ? description.trim()
+                        : null
+                    : existingRole.description;
 
-        // Check if new name conflicts with existing role (if name is being changed)
-        if (name !== undefined && newName !== existingRole.name) {
-            db.get(
-                'SELECT id FROM roles WHERE name = ? COLLATE NOCASE AND id != ?',
-                [newName, id],
-                (err, conflictingRole: RoleRow | undefined) => {
-                    if (err) {
-                        res.status(500).json({ error: err.message });
-                        return;
-                    }
+            // Check if new name conflicts with existing role (if name is being changed)
+            if (name !== undefined && newName !== existingRole.name) {
+                const conflictingRole = await dbGet<RoleRow>(
+                    'SELECT id FROM roles WHERE name = ? COLLATE NOCASE AND id != ?',
+                    [newName, id]
+                );
 
-                    if (conflictingRole) {
-                        res.status(409).json({
-                            error: 'A role with this name already exists',
-                        });
-                        return;
-                    }
-
-                    updateRole();
+                if (conflictingRole) {
+                    res.status(409).json({
+                        error: 'A role with this name already exists',
+                    });
+                    return;
                 }
-            );
-        } else {
-            updateRole();
+            }
+
+            // Update the role
+            await dbRun('UPDATE roles SET name = ?, description = ? WHERE id = ?', [
+                newName,
+                newDescription,
+                id,
+            ]);
+
+            // Fetch the updated role
+            const updatedRole = await dbGet<RoleRow>('SELECT * FROM roles WHERE id = ?', [id]);
+
+            res.json({
+                message: 'Role updated successfully',
+                data: updatedRole,
+            });
+        } catch (err) {
+            const error = err as Error;
+            res.status(500).json({ error: error.message });
         }
-
-        function updateRole(): void {
-            db.run(
-                'UPDATE roles SET name = ?, description = ? WHERE id = ?',
-                [newName, newDescription, id],
-                function (err) {
-                    if (err) {
-                        res.status(500).json({ error: err.message });
-                        return;
-                    }
-
-                    // Fetch the updated role
-                    db.get(
-                        'SELECT * FROM roles WHERE id = ?',
-                        [id],
-                        (err, updatedRole: RoleRow | undefined) => {
-                            if (err) {
-                                res.status(500).json({ error: err.message });
-                                return;
-                            }
-
-                            res.json({
-                                message: 'Role updated successfully',
-                                data: updatedRole,
-                            });
-                        }
-                    );
-                }
-            );
-        }
-    });
-});
+    }
+);
 
 /**
  * @swagger
@@ -387,68 +361,58 @@ router.put('/:id', (req: Request<{ id: string }, unknown, UpdateRoleRequest>, re
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', (req: Request, res: Response) => {
-    const id = req.params.id;
+router.delete(
+    '/:id',
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
 
-    // Validate that ID is a positive integer
-    const numId = parseInt(id);
-    if (!id || id.trim() === '' || isNaN(numId) || numId <= 0 || !/^\d+$/.test(id.trim())) {
-        res.status(400).json({ error: 'Invalid role ID. Must be a positive integer.' });
-        return;
-    }
-
-    // Prevent deactivation of default User role (id: 1)
-    if (numId === 1) {
-        res.status(400).json({
-            error: 'Cannot deactivate the default User role',
-        });
-        return;
-    }
-
-    // Check if role exists
-    db.get('SELECT * FROM roles WHERE id = ?', [id], (err, existingRole: RoleRow | undefined) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-
-        if (!existingRole) {
-            res.status(404).json({ error: 'Role not found' });
-            return;
-        }
-
-        if (!existingRole.is_active) {
-            res.status(400).json({
-                error: 'Role is already deactivated',
-            });
-            return;
-        }
-
-        // Soft delete by setting is_active to 0
-        db.run('UPDATE roles SET is_active = 0 WHERE id = ?', [id], function (err) {
-            if (err) {
-                res.status(500).json({ error: err.message });
+            // Validate that ID is a positive integer
+            const numId = parseInt(id);
+            if (!id || id.trim() === '' || isNaN(numId) || numId <= 0 || !/^\d+$/.test(id.trim())) {
+                res.status(400).json({ error: 'Invalid role ID. Must be a positive integer.' });
                 return;
             }
 
-            // Fetch the updated role
-            db.get(
-                'SELECT * FROM roles WHERE id = ?',
-                [id],
-                (err, deactivatedRole: RoleRow | undefined) => {
-                    if (err) {
-                        res.status(500).json({ error: err.message });
-                        return;
-                    }
+            // Prevent deactivation of default User role (id: 1)
+            if (numId === 1) {
+                res.status(400).json({
+                    error: 'Cannot deactivate the default User role',
+                });
+                return;
+            }
 
-                    res.json({
-                        message: 'Role deactivated successfully',
-                        data: deactivatedRole,
-                    });
-                }
-            );
-        });
-    });
-});
+            // Check if role exists
+            const existingRole = await dbGet<RoleRow>('SELECT * FROM roles WHERE id = ?', [id]);
+
+            if (!existingRole) {
+                res.status(404).json({ error: 'Role not found' });
+                return;
+            }
+
+            if (!existingRole.is_active) {
+                res.status(400).json({
+                    error: 'Role is already deactivated',
+                });
+                return;
+            }
+
+            // Soft delete by setting is_active to 0
+            await dbRun('UPDATE roles SET is_active = 0 WHERE id = ?', [id]);
+
+            // Fetch the updated role
+            const deactivatedRole = await dbGet<RoleRow>('SELECT * FROM roles WHERE id = ?', [id]);
+
+            res.json({
+                message: 'Role deactivated successfully',
+                data: deactivatedRole,
+            });
+        } catch (err) {
+            const error = err as Error;
+            res.status(500).json({ error: error.message });
+        }
+    }
+);
 
 export default router;

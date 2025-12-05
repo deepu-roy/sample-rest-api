@@ -1,5 +1,5 @@
-import config from './config';
-import { Role, RolesResponse, SingleUserResponse, User } from './types';
+import config from './config.js';
+import { Role, RolesResponse, SingleUserResponse, User } from './types/index.js';
 
 let currentUser: User | null = null;
 let availableRoles: Role[] = [];

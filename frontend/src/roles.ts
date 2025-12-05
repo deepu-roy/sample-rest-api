@@ -1,5 +1,5 @@
-import config from './config';
-import { Role, RolesResponse } from './types';
+import config from './config.js';
+import { Role, RolesResponse } from './types/index.js';
 
 // Modal helper functions
 window.closeDeactivateModal = function (): void {

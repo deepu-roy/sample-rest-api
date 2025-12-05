@@ -1,5 +1,5 @@
-import config from './config';
-import { PaginatedUsersResponse, User, HealthResponse } from './types';
+import config from './config.js';
+import { PaginatedUsersResponse, User, HealthResponse } from './types/index.js';
 
 let currentPage = 1;
 const perPage = 6;

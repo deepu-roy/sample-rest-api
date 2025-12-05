@@ -1,4 +1,4 @@
-import config from './config';
+import config from './config.js';
 
 const createRoleForm = document.getElementById('createRoleForm') as HTMLFormElement | null;
 const apiStatus = document.getElementById('apiStatus');
