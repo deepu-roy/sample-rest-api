@@ -171,7 +171,7 @@ router.get(
                           name: row.role_name,
                           description: row.role_description || null,
                           is_active: row.role_is_active || 0,
-                          created_at: '',
+                          created_at: (row as UserRow & { role_created_at: string }).role_created_at || '',
                       }
                     : null,
             }));
