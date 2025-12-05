@@ -1,4 +1,5 @@
-const express = require("express");
+import express, { Request, Response } from 'express';
+
 const router = express.Router();
 
 /**
@@ -23,11 +24,11 @@ const router = express.Router();
  *                   type: string
  *                   format: date-time
  */
-router.get("/", (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-  });
+router.get('/', (_req: Request, res: Response) => {
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+    });
 });
 
-module.exports = router;
+export default router;
