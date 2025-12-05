@@ -63,7 +63,7 @@ docker-compose down
 After running `docker-compose up -d`, the services will be available at:
 
 - **API**: <http://localhost:3000>
-- **Frontend**: <http://localhost:5000>
+- **Frontend**: <http://localhost:3001>
 - **API Documentation**: <http://localhost:3000/api-docs>
 
 ### Docker Compose Commands
@@ -109,7 +109,7 @@ The application uses a multi-container Docker setup:
 - **Frontend Container**: Runs the frontend using Nginx
   - Built from `nginx:alpine` base image
   - Serves static files and proxies API requests
-  - Exposes port 5000 (mapped to internal port 80)
+  - Exposes port 3001 (mapped to internal port 80)
   - Environment variables configure API connection
 
 ### Troubleshooting Docker Setup
@@ -171,7 +171,7 @@ cd frontend
 npm start
 ```
 
-The frontend will be available at `http://localhost:5000`
+The frontend will be available at `http://localhost:3001`
 
 ## Features
 
