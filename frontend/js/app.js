@@ -78,9 +78,9 @@ function renderUsers(data) {
     row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.id}</td>
             <td class="px-6 py-4 whitespace-nowrap"><img src="${user.avatar}" alt="${user.first_name}" class="user-avatar"></td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${user.first_name} ${user.last_name}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${user.email}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${user.job || "N/A"}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(user.first_name)} ${escapeHtml(user.last_name)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(user.email)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(user.job || "N/A")}</td>
             <td class="px-6 py-4 whitespace-nowrap"><span class="role-badge ${roleClass}">${roleName}</span></td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex items-center gap-2">
