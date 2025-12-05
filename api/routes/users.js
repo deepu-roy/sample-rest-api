@@ -473,6 +473,7 @@ router.put("/:id", (req, res) => {
               return res.json({
                 name: name || `${first_name || ""} ${last_name || ""}`.trim(),
                 job: job || "",
+                role_id: role_id || currentUser.role_id,
                 updatedAt: new Date().toISOString(),
               });
             }
