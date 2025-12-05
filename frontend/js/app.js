@@ -3,6 +3,13 @@ import config from "./config.js";
 let currentPage = 1;
 const perPage = 6;
 
+// Helper function to escape HTML to prevent XSS attacks
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Check API connection on load
 async function checkApiConnection() {
   const statusEl = document.getElementById("apiStatus");
