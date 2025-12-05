@@ -4,8 +4,8 @@
   "description": "Frontend for the Sample REST API",
   "main": "server.js",
   "scripts": {
-    "build": "tsc",
-    "start": "http-server . -p 3001 --cors",
+    "build": "tsc && cp *.html dist/",
+    "start": "http-server dist -p 3001 --cors",
     "dev": "tsc --watch",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
