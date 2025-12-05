@@ -58,6 +58,8 @@ export interface CreateUserRequest {
 
 export interface UpdateUserRequest {
     name?: string;
+    first_name?: string;
+    last_name?: string;
     job?: string;
     role_id?: number;
     email?: string;

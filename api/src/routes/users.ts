@@ -55,7 +55,7 @@
  */
 
 import express, { Request, Response } from 'express';
-import { db } from '../db/init';
+import { db, dbAll } from '../db/init';
 import {
     UserRow,
     CountRow,
@@ -104,58 +104,57 @@ interface UserQueryParams {
  *       400:
  *         description: Invalid role parameter
  */
-router.get('/', (req: Request<unknown, unknown, unknown, UserQueryParams>, res: Response) => {
-    const page = parseInt(req.query.page || '1') || 1;
-    const per_page = parseInt(req.query.per_page || '6') || 6;
-    const offset = (page - 1) * per_page;
-    const roleFilter = req.query.role;
+router.get(
+    '/',
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async (req: Request<unknown, unknown, unknown, UserQueryParams>, res: Response) => {
+        try {
+            const page = parseInt(req.query.page || '1') || 1;
+            const per_page = parseInt(req.query.per_page || '6') || 6;
+            const offset = (page - 1) * per_page;
+            const roleFilter = req.query.role;
 
-    // Validate role filter if provided
-    if (roleFilter !== undefined) {
-        const roleId = parseInt(roleFilter);
-        if (isNaN(roleId) || roleId <= 0 || !/^\d+$/.test(roleFilter.toString())) {
-            res.status(400).json({ error: 'Invalid role parameter. Must be a positive integer.' });
-            return;
-        }
-    }
-
-    // Build WHERE clause for role filtering
-    let whereClause = '';
-    let countParams: unknown[] = [];
-    let queryParams: unknown[];
-
-    if (roleFilter) {
-        whereClause = 'WHERE u.role_id = ?';
-        countParams = [parseInt(roleFilter)];
-        queryParams = [parseInt(roleFilter), per_page, offset];
-    } else {
-        queryParams = [per_page, offset];
-    }
-
-    // Count total users with optional role filter
-    const countQuery = `SELECT COUNT(*) as total FROM users u ${whereClause}`;
-
-    db.all(countQuery, countParams, (err, countResult: CountRow[]) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-
-        const total = countResult[0]?.total || 0;
-        const total_pages = Math.ceil(total / per_page);
-
-        // Query users with optional role filter
-        const userQuery = `SELECT u.*, r.name as role_name, r.description as role_description, r.is_active as role_is_active 
-                       FROM users u 
-                       LEFT JOIN roles r ON u.role_id = r.id 
-                       ${whereClause}
-                       LIMIT ? OFFSET ?`;
-
-        db.all(userQuery, queryParams, (err, rows: UserRow[]) => {
-            if (err) {
-                res.status(500).json({ error: err.message });
-                return;
+            // Validate role filter if provided
+            if (roleFilter !== undefined) {
+                const roleId = parseInt(roleFilter);
+                if (isNaN(roleId) || roleId <= 0 || !/^\d+$/.test(roleFilter)) {
+                    res.status(400).json({
+                        error: 'Invalid role parameter. Must be a positive integer.',
+                    });
+                    return;
+                }
             }
+
+            // Build WHERE clause for role filtering
+            let whereClause = '';
+            let countParams: unknown[] = [];
+            let queryParams: unknown[];
+
+            if (roleFilter) {
+                whereClause = 'WHERE u.role_id = ?';
+                countParams = [parseInt(roleFilter)];
+                queryParams = [parseInt(roleFilter), per_page, offset];
+            } else {
+                queryParams = [per_page, offset];
+            }
+
+            // Build queries
+            const countQuery = `SELECT COUNT(*) as total FROM users u ${whereClause}`;
+            const userQuery = `
+                SELECT u.*, r.name as role_name, r.description as role_description, r.is_active as role_is_active 
+                FROM users u 
+                LEFT JOIN roles r ON u.role_id = r.id 
+                ${whereClause}
+                LIMIT ? OFFSET ?`;
+
+            // Run both queries concurrently
+            const [countResult, rows] = await Promise.all([
+                dbAll<CountRow>(countQuery, countParams),
+                dbAll<UserRow>(userQuery, queryParams),
+            ]);
+
+            const total = countResult[0]?.total || 0;
+            const total_pages = Math.ceil(total / per_page);
 
             // Transform the data to include role object
             const transformedData: UserWithRole[] = rows.map((row) => ({
@@ -184,9 +183,12 @@ router.get('/', (req: Request<unknown, unknown, unknown, UserQueryParams>, res: 
                 total_pages,
                 data: transformedData,
             });
-        });
-    });
-});
+        } catch (err) {
+            const error = err as Error;
+            res.status(500).json({ error: error.message });
+        }
+    }
+);
 
 /**
  * @swagger
@@ -312,7 +314,7 @@ router.post('/', (req: Request<unknown, unknown, CreateUserRequest>, res: Respon
             const first_name = nameParts[0];
             const last_name = nameParts[1] || '';
             const email = `${first_name.toLowerCase()}.${last_name ? last_name.toLowerCase() : 'doe'}@reqres.in`;
-            const avatar = `https://reqres.in/img/faces/${Math.floor(Math.random() * 10) + 1}-image.jpg`;
+            const avatar = `https://reqres.in/img/faces/${String(Math.floor(Math.random() * 10) + 1)}-image.jpg`;
 
             db.run(
                 'INSERT INTO users (first_name, last_name, email, avatar, job, role_id) VALUES (?, ?, ?, ?, ?, ?)',
@@ -373,9 +375,7 @@ router.post('/', (req: Request<unknown, unknown, CreateUserRequest>, res: Respon
  */
 router.put('/:id', (req: Request<{ id: string }, unknown, UpdateUserRequest>, res: Response) => {
     const id = req.params.id;
-    const { name, job, role_id } = req.body;
-    const first_name = (req.body as { first_name?: string }).first_name;
-    const last_name = (req.body as { last_name?: string }).last_name;
+    const { name, first_name, last_name, job, role_id } = req.body;
 
     if (!name && !first_name && !last_name && !job && !role_id) {
         res.status(400).json({
@@ -463,7 +463,7 @@ router.put('/:id', (req: Request<{ id: string }, unknown, UpdateUserRequest>, re
                     // Log role change for audit purposes
                     if (role_id && role_id !== currentUser.role_id) {
                         console.log(
-                            `AUDIT: User ${id} role changed from ${currentUser.role_id} to ${role_id} at ${new Date().toISOString()}`
+                            `AUDIT: User ${id} role changed from ${String(currentUser.role_id)} to ${String(role_id)} at ${new Date().toISOString()}`
                         );
                     }
 

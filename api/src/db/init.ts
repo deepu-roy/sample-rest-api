@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
-import { UserRow, RoleRow, CountRow, TableInfoRow } from '../types';
+import { CountRow, TableInfoRow } from '../types';
 
 const sqlite3Verbose = sqlite3.verbose();
 
@@ -55,21 +55,84 @@ interface SampleUser {
     role_id: number;
 }
 
-// Initialize database
-export function initializeDatabase(): void {
-    db.serialize(() => {
-        // First, create roles table
-        createRolesTable(() => {
-            // Then check if the users table exists and has data
-            db.get(
-                "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='users'",
-                (err, row: CountRow | undefined) => {
-                    const tableExists: boolean = !err && row !== undefined && row.count > 0;
+const DEFAULT_ROLES: DefaultRole[] = [
+    { id: 1, name: 'User', description: 'Default role for regular users' },
+    { id: 2, name: 'Admin', description: 'Administrative privileges' },
+    { id: 3, name: 'Moderator', description: 'Limited administrative access' },
+];
 
-                    // Create users table with role_id column
-                    db.run(
-                        `
-          CREATE TABLE IF NOT EXISTS users (
+const SAMPLE_USERS: SampleUser[] = [
+    {
+        email: 'george.bluth@reqres.in',
+        first_name: 'George',
+        last_name: 'Bluth',
+        avatar: 'https://reqres.in/img/faces/1-image.jpg',
+        role_id: 2, // Admin role
+    },
+    {
+        email: 'janet.weaver@reqres.in',
+        first_name: 'Janet',
+        last_name: 'Weaver',
+        avatar: 'https://reqres.in/img/faces/2-image.jpg',
+        role_id: 1, // User role
+    },
+];
+
+// Initialize database
+export async function initializeDatabase(): Promise<void> {
+    try {
+        await createRolesTable();
+        await createUsersTable();
+        console.log('Database initialization completed');
+    } catch (error) {
+        console.error('Database initialization failed:', error);
+        throw error;
+    }
+}
+
+async function createRolesTable(): Promise<void> {
+    await dbRun(`
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    const row = await dbGet<CountRow>('SELECT COUNT(*) as count FROM roles');
+
+    if (row && row.count === 0) {
+        console.log('Empty roles table detected, inserting default roles...');
+        await insertDefaultRoles();
+    } else {
+        console.log('Roles table already has data, skipping default roles insertion');
+    }
+}
+
+async function insertDefaultRoles(): Promise<void> {
+    for (const role of DEFAULT_ROLES) {
+        await dbRun('INSERT INTO roles (id, name, description) VALUES (?, ?, ?)', [
+            role.id,
+            role.name,
+            role.description,
+        ]);
+        console.log(`Inserted default role: ${role.name}`);
+    }
+    console.log('Default roles insertion completed');
+}
+
+async function createUsersTable(): Promise<void> {
+    // Check if users table exists
+    const tableRow = await dbGet<CountRow>(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='users'"
+    );
+    const tableExists = tableRow !== undefined && tableRow.count > 0;
+
+    // Create users table with role_id column
+    await dbRun(`
+        CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT,
             first_name TEXT,
@@ -78,174 +141,57 @@ export function initializeDatabase(): void {
             job TEXT,
             role_id INTEGER DEFAULT 1,
             FOREIGN KEY (role_id) REFERENCES roles(id)
-          )
-        `,
-                        (err) => {
-                            if (err) {
-                                console.error('Error creating users table:', err);
-                                return;
-                            }
+        )
+    `);
 
-                            // If table existed, we need to add role_id column if it doesn't exist
-                            if (tableExists) {
-                                addRoleIdColumnIfNotExists(() => {
-                                    checkAndInsertSampleData(tableExists);
-                                });
-                            } else {
-                                checkAndInsertSampleData(tableExists);
-                            }
-                        }
-                    );
-                }
-            );
-        });
-    });
+    // If table existed, we need to add role_id column if it doesn't exist
+    if (tableExists) {
+        await addRoleIdColumnIfNotExists();
+    }
+
+    await checkAndInsertSampleData(tableExists);
 }
 
-function createRolesTable(callback: () => void): void {
-    // Create roles table
-    db.run(
-        `
-    CREATE TABLE IF NOT EXISTS roles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      description TEXT,
-      is_active BOOLEAN DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `,
-        (err) => {
-            if (err) {
-                console.error('Error creating roles table:', err);
-                return;
-            }
+async function addRoleIdColumnIfNotExists(): Promise<void> {
+    const columns = await dbAll<TableInfoRow>('PRAGMA table_info(users)');
+    const hasRoleId = columns.some((col) => col.name === 'role_id');
 
-            // Check if roles table is empty and insert default roles
-            db.get('SELECT COUNT(*) as count FROM roles', (err, row: CountRow | undefined) => {
-                if (!err && row && row.count === 0) {
-                    console.log('Empty roles table detected, inserting default roles...');
-                    insertDefaultRoles(callback);
-                } else {
-                    console.log('Roles table already has data, skipping default roles insertion');
-                    if (callback) callback();
-                }
-            });
-        }
-    );
-}
-
-function insertDefaultRoles(callback: () => void): void {
-    const defaultRoles: DefaultRole[] = [
-        { id: 1, name: 'User', description: 'Default role for regular users' },
-        { id: 2, name: 'Admin', description: 'Administrative privileges' },
-        { id: 3, name: 'Moderator', description: 'Limited administrative access' },
-    ];
-
-    const insertStmt = db.prepare('INSERT INTO roles (id, name, description) VALUES (?, ?, ?)');
-
-    let completed = 0;
-    defaultRoles.forEach((role) => {
-        insertStmt.run([role.id, role.name, role.description], function (err) {
-            if (err) {
-                console.error('Error inserting default role:', err);
-            } else {
-                console.log(`Inserted default role: ${role.name}`);
-            }
-            completed++;
-            if (completed === defaultRoles.length) {
-                insertStmt.finalize(() => {
-                    console.log('Default roles insertion completed');
-                    if (callback) callback();
-                });
-            }
-        });
-    });
-}
-
-function addRoleIdColumnIfNotExists(callback: () => void): void {
-    // Check if role_id column exists
-    db.all('PRAGMA table_info(users)', (err, columns: TableInfoRow[]) => {
-        if (err) {
-            console.error('Error checking users table structure:', err);
-            if (callback) callback();
-            return;
-        }
-
-        const hasRoleId = columns.some((col) => col.name === 'role_id');
-
-        if (!hasRoleId) {
-            console.log('Adding role_id column to existing users table...');
-            db.run('ALTER TABLE users ADD COLUMN role_id INTEGER DEFAULT 1', (err) => {
-                if (err) {
-                    console.error('Error adding role_id column:', err);
-                } else {
-                    console.log('Successfully added role_id column to users table');
-                }
-                if (callback) callback();
-            });
-        } else {
-            console.log('role_id column already exists in users table');
-            if (callback) callback();
-        }
-    });
-}
-
-function checkAndInsertSampleData(tableExists: boolean): void {
-    // Only insert sample data if the table didn't exist before or is empty
-    if (!tableExists) {
-        console.log('New database detected, inserting sample users...');
-        insertSampleUsers();
+    if (!hasRoleId) {
+        console.log('Adding role_id column to existing users table...');
+        await dbRun('ALTER TABLE users ADD COLUMN role_id INTEGER DEFAULT 1');
+        console.log('Successfully added role_id column to users table');
     } else {
-        // Check if table is empty
-        db.get('SELECT COUNT(*) as count FROM users', (err, row: CountRow | undefined) => {
-            if (!err && row && row.count === 0) {
-                console.log('Empty users table detected, inserting sample users...');
-                insertSampleUsers();
-            } else {
-                console.log('Existing users table with data found, skipping sample data insertion');
-            }
-        });
+        console.log('role_id column already exists in users table');
     }
 }
 
-function insertSampleUsers(): void {
-    const sampleUsers: SampleUser[] = [
-        {
-            email: 'george.bluth@reqres.in',
-            first_name: 'George',
-            last_name: 'Bluth',
-            avatar: 'https://reqres.in/img/faces/1-image.jpg',
-            role_id: 2, // Admin role
-        },
-        {
-            email: 'janet.weaver@reqres.in',
-            first_name: 'Janet',
-            last_name: 'Weaver',
-            avatar: 'https://reqres.in/img/faces/2-image.jpg',
-            role_id: 1, // User role
-        },
-    ];
+async function checkAndInsertSampleData(tableExists: boolean): Promise<void> {
+    if (!tableExists) {
+        console.log('New database detected, inserting sample users...');
+        await insertSampleUsers();
+        return;
+    }
 
-    const insertStmt = db.prepare(
-        'INSERT INTO users (email, first_name, last_name, avatar, role_id) VALUES (?, ?, ?, ?, ?)'
-    );
+    // Check if table is empty
+    const row = await dbGet<CountRow>('SELECT COUNT(*) as count FROM users');
 
-    sampleUsers.forEach((user) => {
-        insertStmt.run(
-            [user.email, user.first_name, user.last_name, user.avatar, user.role_id],
-            function (err) {
-                if (err) {
-                    console.error('Error inserting sample user:', err);
-                } else {
-                    console.log(
-                        `Inserted sample user: ${user.first_name} ${user.last_name} with role_id ${user.role_id}`
-                    );
-                }
-            }
+    if (row && row.count === 0) {
+        console.log('Empty users table detected, inserting sample users...');
+        await insertSampleUsers();
+    } else {
+        console.log('Existing users table with data found, skipping sample data insertion');
+    }
+}
+
+async function insertSampleUsers(): Promise<void> {
+    for (const user of SAMPLE_USERS) {
+        await dbRun(
+            'INSERT INTO users (email, first_name, last_name, avatar, role_id) VALUES (?, ?, ?, ?, ?)',
+            [user.email, user.first_name, user.last_name, user.avatar, user.role_id]
         );
-    });
-
-    insertStmt.finalize(() => {
-        console.log('Sample data insertion completed');
-    });
+        console.log(
+            `Inserted sample user: ${user.first_name} ${user.last_name} with role_id ${String(user.role_id)}`
+        );
+    }
+    console.log('Sample data insertion completed');
 }

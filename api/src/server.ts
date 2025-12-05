@@ -37,7 +37,10 @@ app.use('/api-docs', swaggerUi.serve);
 app.get('/api-docs', swaggerUi.setup(swaggerDocs));
 
 // Initialize database
-initializeDatabase();
+initializeDatabase().catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+});
 
 // Routes
 app.use('/api/users', usersRouter);
